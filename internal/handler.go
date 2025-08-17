@@ -68,16 +68,6 @@ func (h *Handler) NavigateToTest() error {
 	page.MustNavigate("https://student.hitbullseye.com/testzone")
 	page.MustNavigate("https://student.hitbullseye.com/testzone/tests-list/Open%20Tests")
 	page.MustWaitLoad()
-
-	// page.MustElement("#content > div > app-tests-menus > div > div.home-block.home-block1 > div > div:nth-child(1) > div > a").
-	// 	MustWaitVisible().
-	// 	MustClick()
-	//
-	// openTests := "#content > div > app-tests-menus > div > div.home-block.home-block1 > div > div:nth-child(6) > div > a"
-	// page.MustElement(openTests).MustWaitVisible().MustClick()
-	// page.MustElement("#content > div > app-tests-list-secure > div > div.d-sm-flex.align-items-center.justify-content-between.mb-3 > h1").
-	// 	MustWaitVisible()
-
 	return nil
 }
 
