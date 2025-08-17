@@ -2,11 +2,13 @@ package internal
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/go-rod/rod"
+	"github.com/go-rod/rod/lib/launcher"
 )
 
 type Handler struct {
@@ -29,8 +31,10 @@ func Sleep(timeDuration time.Duration) {
 }
 
 func NewHandler(username, password string) *Handler {
+	launcher := launcher.New().Headless(false)
 	browser := rod.New().
-		ControlURL("ws://127.0.0.1:9222/devtools/browser/728c4534-0ed3-4296-a3e4-a5009dbbb265").
+		ControlURL(launcher.MustLaunch()).
+		Logger(nil).
 		MustConnect()
 	return &Handler{
 		URL:      "https://www.hitbullseye.com/",
@@ -42,10 +46,13 @@ func NewHandler(username, password string) *Handler {
 }
 
 func (h *Handler) Login() error {
+	fmt.Println("=== Navigating To Login Page ===")
+	fmt.Println("** If it taking too long click on login button **")
 	page := h.Page
-	page.MustNavigate(h.URL).MustWaitLoad()
+	page.MustNavigate(h.URL)
 
-	page.MustElement("#pageid-1 > header > div > div > div.col-lg-4.col-md-4.col-sm-6.col-xs-6.header-right > ul > li:nth-child(1) > a").
+	page.Timeout(time.Second * 10).
+		MustElement("#pageid-1 > header > div > div > div.col-lg-4.col-md-4.col-sm-6.col-xs-6.header-right > ul > li:nth-child(1) > a").
 		MustWaitVisible().
 		MustClick()
 
@@ -60,24 +67,24 @@ func (h *Handler) Login() error {
 		MustClick()
 
 	page.MustElement("#accordionSidebar > li.nav-item.active > a > i").MustWaitVisible()
+	fmt.Println("=== Logged in Successfully ===")
+	fmt.Println()
 	return nil
 }
 
 func (h *Handler) NavigateToTest() error {
+	fmt.Println("=== Navigating To Test ===")
 	page := h.Page
-	page.MustNavigate("https://student.hitbullseye.com/testzone")
-	page.MustNavigate("https://student.hitbullseye.com/testzone/tests-list/Open%20Tests")
-	page.MustWaitLoad()
+	testTab := "#accordionSidebar > li:nth-child(5) > a"
+	page.MustElement(testTab).MustClick()
 
-	// page.MustElement("#content > div > app-tests-menus > div > div.home-block.home-block1 > div > div:nth-child(1) > div > a").
-	// 	MustWaitVisible().
-	// 	MustClick()
-	//
-	// openTests := "#content > div > app-tests-menus > div > div.home-block.home-block1 > div > div:nth-child(6) > div > a"
-	// page.MustElement(openTests).MustWaitVisible().MustClick()
-	// page.MustElement("#content > div > app-tests-list-secure > div > div.d-sm-flex.align-items-center.justify-content-between.mb-3 > h1").
-	// 	MustWaitVisible()
+	fullLengthTestTab := "#content > div > app-tests-menus > div > div.home-block.home-block1 > div > div:nth-child(1) > div > a"
+	page.MustElement(fullLengthTestTab).MustClick()
 
+	openTestTab := "#content > div > app-tests-menus > div > div.home-block.home-block1 > div > div:nth-child(7) > div > a"
+	page.MustElement(openTestTab).MustClick()
+
+	Sleep(5)
 	return nil
 }
 
@@ -93,10 +100,13 @@ func (h *Handler) GiveTest() error {
 
 	startTestBtns, _ := page.Elements(".mk-start-btn-n-design")
 	openTests = append(openTests, startTestBtns...)
-
-	fmt.Printf("Found %d open tests\n", len(openTests))
-
 	totalOpenTest := len(openTests)
+	if totalOpenTest == 0 {
+		fmt.Println("=== No more Available Test ===")
+		os.Exit(0)
+	}
+	fmt.Printf("Found %d open tests\n", totalOpenTest)
+
 	testBtn := openTests[0]
 	testBtn.MustClick()
 	time.Sleep(time.Second * 5)
@@ -117,10 +127,7 @@ func (h *Handler) startTest() {
 	if nextBtnElement, err := page.Timeout(time.Second * 5).Element(deviceAndBrowserCheckNextBtn); err == nil {
 		nextBtnElement.MustClick()
 		fmt.Println("Device check button clicked")
-	} else {
-		fmt.Println("Os or Browser Not supported")
 	}
-
 	// Wait for instructions page
 	fmt.Println("Checking for Multiple Sessions...")
 	var nextBtn *rod.Element
@@ -147,7 +154,7 @@ func (h *Handler) startTest() {
 		Text()
 	totalQuestionsInt, _ := strconv.Atoi(totalQuestionsStr)
 
-	fmt.Printf("Test Name: %s \n Total Questions: %d\n", testName, totalQuestionsInt)
+	fmt.Printf("Test Name: %s \nTotal Questions: %d\n", testName, totalQuestionsInt)
 
 	// Start test
 	nextBtn.MustClick()
@@ -199,7 +206,7 @@ func (h *Handler) collectQuestions(totalQuestions int) {
 }
 
 func (h *Handler) applyAnswers() {
-	fmt.Println("\n=== GETTING AI ANSWERS ===")
+	fmt.Println("\n=== GETTING ANSWERS FROM AI (GEMINI-flash)===")
 	answers := h.GetAnswers()
 
 	fmt.Println("\n=== APPLYING ANSWERS ===")
@@ -271,7 +278,7 @@ func (h *Handler) getQuestionText(questionNo int) string {
 	}
 
 	for _, selector := range selectors {
-		if element, err := h.Page.Timeout(time.Second * 5).Element(selector); err == nil {
+		if element, err := h.Page.Timeout(time.Second * 10).Element(selector); err == nil {
 			if text, _ := element.Text(); strings.TrimSpace(text) != "" {
 				return strings.TrimSpace(text)
 			}
@@ -365,7 +372,7 @@ func (h *Handler) clickOption(questionNo, optionNo int) bool {
 // Fixed version - replace your triggerPageActivation function with this
 func (h *Handler) triggerPageActivation() {
 	page := h.Page
-	fmt.Println("Triggering page activation with random clicks...")
+	fmt.Println("Simulating Human Actions with random clicks to ByPass AntiCheat...")
 
 	// Click on body element multiple times at different positions
 	if body, err := page.Element("body"); err == nil {
@@ -416,6 +423,7 @@ func (h *Handler) triggerPageActivation() {
 	time.Sleep(time.Millisecond * 300)
 
 	fmt.Println("Page activation completed")
+	fmt.Println()
 }
 
 func (h *Handler) ResetQuestionBank() {
