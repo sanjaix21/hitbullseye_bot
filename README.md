@@ -4,6 +4,8 @@ An automation bot for Hitbullseye online tests that uses Google's Gemini AI to a
 
 ## ⚠️ Disclaimer
 
+This Bot uses GEMINI AI for getting answers, so it's not 100% right answers, also questions that include images fail. The average correctness is 70%
+
 This bot is for educational purposes only. Use it responsibly and in accordance with your institution's policies. The authors are not responsible for any misuse or violations of terms of service.
 
 ## ✨ Features
