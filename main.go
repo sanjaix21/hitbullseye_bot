@@ -16,11 +16,11 @@ func main() {
 	// if err != nil {
 	// 	panic(err)
 	// }
-	//
-	// err = handler.NavigateToTest()
-	// if err != nil {
-	// 	panic(err)
-	// }
+
+	err = handler.NavigateToTest()
+	if err != nil {
+		panic(err)
+	}
 
 	err = handler.GiveTest()
 	if err != nil {

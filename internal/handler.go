@@ -30,7 +30,7 @@ func Sleep(timeDuration time.Duration) {
 
 func NewHandler(username, password string) *Handler {
 	browser := rod.New().
-		ControlURL("ws://127.0.0.1:9222/devtools/browser/44f69c1f-6927-4e97-855b-fda47d55f9ec").
+		ControlURL("ws://127.0.0.1:9222/devtools/browser/728c4534-0ed3-4296-a3e4-a5009dbbb265").
 		MustConnect()
 	return &Handler{
 		URL:      "https://www.hitbullseye.com/",
@@ -66,23 +66,23 @@ func (h *Handler) Login() error {
 func (h *Handler) NavigateToTest() error {
 	page := h.Page
 	page.MustNavigate("https://student.hitbullseye.com/testzone")
+	page.MustNavigate("https://student.hitbullseye.com/testzone/tests-list/Open%20Tests")
 	page.MustWaitLoad()
 
-	page.MustElement("#content > div > app-tests-menus > div > div.home-block.home-block1 > div > div:nth-child(1) > div > a").
-		MustWaitVisible().
-		MustClick()
-
-	openTests := "#content > div > app-tests-menus > div > div.home-block.home-block1 > div > div:nth-child(6) > div > a"
-	page.MustElement(openTests).MustWaitVisible().MustClick()
-	page.MustElement("#content > div > app-tests-list-secure > div > div.d-sm-flex.align-items-center.justify-content-between.mb-3 > h1").
-		MustWaitVisible()
+	// page.MustElement("#content > div > app-tests-menus > div > div.home-block.home-block1 > div > div:nth-child(1) > div > a").
+	// 	MustWaitVisible().
+	// 	MustClick()
+	//
+	// openTests := "#content > div > app-tests-menus > div > div.home-block.home-block1 > div > div:nth-child(6) > div > a"
+	// page.MustElement(openTests).MustWaitVisible().MustClick()
+	// page.MustElement("#content > div > app-tests-list-secure > div > div.d-sm-flex.align-items-center.justify-content-between.mb-3 > h1").
+	// 	MustWaitVisible()
 
 	return nil
 }
 
 func (h *Handler) GiveTest() error {
 	page := h.Page
-	page.MustNavigate("https://student.hitbullseye.com/testzone/tests-list/Open%20Tests")
 
 	Sleep(2)
 	page.MustElement(".mk-start-btn-n-design").MustWaitVisible()
@@ -96,14 +96,14 @@ func (h *Handler) GiveTest() error {
 
 	fmt.Printf("Found %d open tests\n", len(openTests))
 
-	for i, btn := range openTests {
-		fmt.Printf("Starting test %d\n", i+1)
-		btn.MustClick()
-		time.Sleep(time.Second * 5)
-		h.startTest()
-		fmt.Println("Doing next test")
-		time.Sleep(time.Second * 5)
-	}
+	totalOpenTest := len(openTests)
+	testBtn := openTests[0]
+	testBtn.MustClick()
+	time.Sleep(time.Second * 5)
+	h.startTest()
+	fmt.Printf("Test Done, Remaining Test: %d\n", totalOpenTest-1)
+	fmt.Println("=== DOING NEXT TEST ===")
+	h.GiveTest()
 	return nil
 }
 
@@ -113,12 +113,16 @@ func (h *Handler) startTest() {
 
 	// Handle initial buttons
 	deviceAndBrowserCheckNextBtn := "#nexinstructon"
+	fmt.Println("Checking for Device and Browser Compatibility...")
 	if nextBtnElement, err := page.Timeout(time.Second * 5).Element(deviceAndBrowserCheckNextBtn); err == nil {
 		nextBtnElement.MustClick()
 		fmt.Println("Device check button clicked")
+	} else {
+		fmt.Println("Os or Browser Not supported")
 	}
 
 	// Wait for instructions page
+	fmt.Println("Checking for Multiple Sessions...")
 	var nextBtn *rod.Element
 	var err error
 	for {
@@ -143,7 +147,7 @@ func (h *Handler) startTest() {
 		Text()
 	totalQuestionsInt, _ := strconv.Atoi(totalQuestionsStr)
 
-	fmt.Printf("Test: %s | Questions: %d\n", testName, totalQuestionsInt)
+	fmt.Printf("Test Name: %s \n Total Questions: %d\n", testName, totalQuestionsInt)
 
 	// Start test
 	nextBtn.MustClick()
@@ -157,12 +161,20 @@ func (h *Handler) startTest() {
 
 	// Get AI answers and apply them
 	h.applyAnswers()
+	h.ResetQuestionBank()
 }
 
 func (h *Handler) collectQuestions(totalQuestions int) {
+	// TODO:
+	// Random click is neccessary for the site to show the html code
+	// Clicking the Question Area multiple times
+	// If Failed need manuall clicking
+	fmt.Println("Entered the qeustion page.")
 	fmt.Println("=== COLLECTING QUESTIONS ===")
+	Sleep(1)
+	h.triggerPageActivation()
 
-	for i := 0; i < totalQuestions; i++ {
+	for i := range totalQuestions {
 		questionNo := i + 1
 
 		// Get question text
@@ -171,11 +183,7 @@ func (h *Handler) collectQuestions(totalQuestions int) {
 		// Get options
 		options := h.getQuestionOptions(questionNo)
 
-		// Better printing
-		// fmt.Printf("\n--- Question %d ---\n", questionNo)
-		// fmt.Printf("Q: %s\n", questionText)
-		// fmt.Printf("Options: %v\n", options)
-		fmt.Printf("Q: %d done\n", questionNo)
+		fmt.Printf("Q: %d done collecting\n", questionNo)
 
 		// Store question
 		h.QuestionBank = append(h.QuestionBank, Questions{
@@ -263,7 +271,7 @@ func (h *Handler) getQuestionText(questionNo int) string {
 	}
 
 	for _, selector := range selectors {
-		if element, err := h.Page.Timeout(time.Second * 2).Element(selector); err == nil {
+		if element, err := h.Page.Timeout(time.Second * 5).Element(selector); err == nil {
 			if text, _ := element.Text(); strings.TrimSpace(text) != "" {
 				return strings.TrimSpace(text)
 			}
@@ -352,4 +360,64 @@ func (h *Handler) clickOption(questionNo, optionNo int) bool {
 	}
 
 	return false
+}
+
+// Fixed version - replace your triggerPageActivation function with this
+func (h *Handler) triggerPageActivation() {
+	page := h.Page
+	fmt.Println("Triggering page activation with random clicks...")
+
+	// Click on body element multiple times at different positions
+	if body, err := page.Element("body"); err == nil {
+		// Get body dimensions using Shape() instead of Box()
+		shape, err := body.Shape()
+		if err == nil && len(shape.Quads) > 0 {
+			quad := shape.Quads[0]
+
+			// Perform 3-4 clicks at different positions
+			positions := []struct{ x, y float64 }{
+				{quad[0] + 100, quad[1] + 150},
+				{quad[0] + 200, quad[1] + 200},
+				{quad[0] + 300, quad[1] + 180},
+				{quad[0] + 150, quad[1] + 250},
+			}
+
+			for i, pos := range positions {
+				// Use correct MoveTo and Click syntax
+				page.Mouse.MustMoveTo(pos.x, pos.y)
+				time.Sleep(time.Millisecond * 100)
+				page.Mouse.MustClick("left")
+				fmt.Printf("Click %d at (%.0f, %.0f)\n", i+1, pos.x, pos.y)
+				time.Sleep(time.Millisecond * 200)
+			}
+		} else {
+			// Fallback: click on fixed coordinates
+			positions := []struct{ x, y float64 }{
+				{200, 200},
+				{300, 250},
+				{400, 300},
+				{250, 350},
+			}
+
+			for i, pos := range positions {
+				page.Mouse.MustMoveTo(pos.x, pos.y)
+				time.Sleep(time.Millisecond * 100)
+				page.Mouse.MustClick("left")
+				fmt.Printf("Fallback click %d at (%.0f, %.0f)\n", i+1, pos.x, pos.y)
+				time.Sleep(time.Millisecond * 200)
+			}
+		}
+	}
+
+	// Additional activation attempts
+	page.Mouse.MustScroll(0, 50)
+	time.Sleep(time.Millisecond * 300)
+	page.Mouse.MustScroll(0, -50)
+	time.Sleep(time.Millisecond * 300)
+
+	fmt.Println("Page activation completed")
+}
+
+func (h *Handler) ResetQuestionBank() {
+	h.QuestionBank = h.QuestionBank[:0]
 }
