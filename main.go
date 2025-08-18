@@ -12,8 +12,8 @@ import (
 func main() {
 	_ = gotenv.Load()
 	var hitbullseyeId, hitbullseyePassword string
-	hitbullseyeId = os.Getenv("HBE_ID")
-	hitbullseyePassword = os.Getenv("HBE_PASS")
+	hitbullseyeId = os.Getenv("HITBULLSEYE_ID")
+	hitbullseyePassword = os.Getenv("HITBULLSEYE_PASS")
 
 	if hitbullseyeId == "" || hitbullseyePassword == "" {
 		fmt.Println("⚠️  Please open your .env file and add:\nHBE_ID=your_id\nHBE_PASS=your_pass")
